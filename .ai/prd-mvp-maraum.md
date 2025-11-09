@@ -417,12 +417,13 @@ Three pre-written scenarios with emoji identifiers:
 - Encourages commitment to finishing
 
 3.5.2 Session Persistence
-- All messages automatically saved to database after each exchange
-- Session state includes:
-  - Conversation history (both chats)
-  - Message counts (main/helper)
+- All messages automatically saved to separate messages table after each exchange
+- Messages stored individually (normalized), not as embedded JSON
+- Session metadata tracks:
+  - Message counts (main/helper) - updated automatically
   - Timestamps (start, last activity, completion)
-  - Duration tracking
+  - Completion status and scenario reference
+- Duration calculated at completion time based on timestamps
 
 3.5.3 Automatic Session Restoration
 - On page refresh: automatically loads active session
@@ -432,16 +433,17 @@ Three pre-written scenarios with emoji identifiers:
 
 3.5.4 Session Expiration
 - Incomplete sessions auto-expire after 7 days of inactivity
-- Expired sessions deleted from database
+- Automated cleanup process runs on scheduled basis (database function)
+- Expired sessions deleted from database permanently
 - User can then start fresh scenario
-- No notification of expiration
+- No notification of expiration sent to user
 
 3.5.5 Session Completion
 - Triggered when LLM outputs completion flag
 - Sets `is_completed = true` in database
 - Records completion timestamp
-- Calculates total duration
-- Increments user's completed scenario count
+- Calculates total duration (once, at completion time, from start to completion timestamps)
+- Increments user's completed scenario count and weekly completion count
 - Makes session available in history
 - Allows user to start new scenario
 
@@ -504,7 +506,8 @@ Three pre-written scenarios with emoji identifiers:
 - Tracked in user record
 
 3.8.2 Limit Enforcement
-- Check performed before scenario start
+- Check performed in application logic before scenario start (not database constraint)
+- Database stores completion counts; application enforces limits
 - If limit reached: display personality-consistent blocking message
 - Example: "You've exhausted your conversational allowance for the week. Return [date]."
 - Show scenarios grayed out with countdown timer
@@ -555,7 +558,8 @@ Three pre-written scenarios with emoji identifiers:
 3.10.1 Modular Prompt Structure
 - Base template for each chat type (scenario/helper)
 - Scenario-specific components inject into base
-- Store as markdown files in version control
+- Stored as .MD files in version control (not in database)
+- Referenced via environment variables or configuration
 - Include 3-5 example exchanges per scenario
 
 3.10.2 Scenario Prompt Components
@@ -584,76 +588,73 @@ Three pre-written scenarios with emoji identifiers:
 
 ### 3.11 Data Persistence
 
-3.11.1 Session Data Structure
-```json
-{
-  "id": "uuid",
-  "user_id": "uuid",
-  "scenario_id": "integer",
-  "is_completed": "boolean",
-  "conversation_json": {
-    "messages": [
-      {
-        "role": "user|scenario|helper",
-        "content": "string",
-        "timestamp": "ISO8601",
-        "chat_type": "main|helper"
-      }
-    ]
-  },
-  "started_at": "timestamp",
-  "last_activity_at": "timestamp",
-  "completed_at": "timestamp (nullable)",
-  "message_count_main": "integer",
-  "message_count_helper": "integer",
-  "duration_seconds": "integer"
-}
-```
+**Note:** Detailed database schema and implementation details are documented in `.ai/database-planning-summary.md`. This section provides product-level overview.
 
-3.11.2 User Data Structure
-- User ID (Supabase Auth)
-- Email
-- Created timestamp
-- Completed scenario count
-- Current week completion count
-- Week reset date
+3.11.1 User Data Structure (Profiles)
+- Separate profiles table following Supabase Auth best practices
+- Links to Supabase Auth users via foreign key
+- Stores: email, completed scenario count, current week completion count
+- Week reset date stored in UTC, converted to local timezone for display
+- Tracks completion counts and weekly limits
 
-3.11.3 Scenario Configuration Data
+3.11.2 Session Data Structure
+- Session metadata: completion status, timestamps, scenario reference
+- Message counts (main/helper) tracked separately and updated automatically
+- Duration calculated once at completion time
+- Messages stored in separate normalized table (not embedded in session)
+- Single active session per user enforced at database level
+
+3.11.3 Message Storage
+- Separate messages table for conversation history
+- Each message contains: role (user/scenario/helper), chat type (main/helper), content, timestamp
+- Supports incremental saves during streaming
+- Approximately 100 messages expected per completed scenario
+- Messages automatically deleted when parent session is deleted
+
+3.11.4 Scenario Configuration Data
 - Scenario ID
 - Title
 - Emoji icon
-- Difficulty level
-- Initial messages (main/helper)
-- Prompt template references
-- Vocabulary themes
+- Initial messages (main/helper) pre-written
+- Active/inactive flag for future scenario management
+- Prompt templates stored as .MD files in version control (not in database)
 
-3.11.4 Database Constraints
-- Unique constraint: `(user_id WHERE is_completed=false)` enforces single active session
-- Foreign keys: sessions reference users and scenarios
-- Indexes on user_id, scenario_id, is_completed, completed_at
+3.11.5 Database Constraints and Integrity
+- Unique constraint enforces single active session per user
+- Foreign keys with cascading deletion: user deletion removes all sessions and messages
+- Scenario deletion restricted if active sessions exist
+- Optimized indexes for common queries (session lookup, history retrieval)
+- Row-level security policies ensure users access only their own data
 
 ### 3.12 Logging and Monitoring
 
+**Note:** Structured logging system with granular event tracking. Full specification in `.ai/database-planning-summary.md`.
+
 3.12.1 Logged Events
-- API call failures and retry attempts
-- Authentication events (login, logout, registration)
-- Scenario completions
-- Session expirations
-- Error occurrences
-- Rate limit hits
+- Separate logs table with severity levels (error, warn, info, debug)
+- Comprehensive event taxonomy covering:
+  - API operations (calls, failures, retries, timeouts)
+  - Authentication events (registration, login, logout, session expiration)
+  - Scenario lifecycle (start, completion, abandonment)
+  - Session management (creation, restoration, expiration cleanup)
+  - Rate limiting (checks, exceeded limits, resets)
+  - System operations (database errors, cleanup jobs)
+- Logs automatically expire after 30 days (automated cleanup)
 
 3.12.2 Privacy Constraints
 - No message content logged
-- Only metadata and event types
-- User identifiers anonymized in logs
-- Logs retained for 30 days maximum
+- Only metadata and event types stored
+- User identifiers retained for correlation but can be anonymized
+- Conversation text never persisted in logs
+- GDPR-compliant retention policies
 
 3.12.3 Performance Monitoring
-- API response times
-- Streaming latency
+- API response times and success rates
+- Streaming latency measurements
 - Page load times
-- Session restoration times
+- Session restoration success rates
 - Database query performance
+- All captured passively via operational logging
 
 ## 4. Product Boundaries
 
@@ -837,7 +838,7 @@ Acceptance Criteria:
 - Deletion requires confirmation dialog
 - Confirmation dialog warns about permanent data loss
 - User must type confirmation phrase (e.g., "DELETE")
-- Deletion removes: user record, all sessions, all history
+- Deletion removes: user record, all sessions, all messages, all history (complete data removal via cascading deletion)
 - Cannot be undone
 - User redirected to landing page after deletion
 - Deleted account email can be reused for new registration
@@ -1609,9 +1610,9 @@ So that privacy is maintained
 Acceptance Criteria:
 - Profile page shows only current user's data
 - History shows only current user's scenarios
-- Database queries filtered by authenticated user ID
+- Database row-level security policies filter data by authenticated user ID
 - Direct URL manipulation cannot access other users' data
-- Authorization checks on every request
+- Authorization checks at both application and database levels
 - SQL injection prevention in queries
 
 **US-060: GDPR Compliance Basics**
@@ -1620,10 +1621,11 @@ I want basic data protection rights
 So that I can control my information
 
 Acceptance Criteria:
-- Account deletion removes all user data
+- Account deletion removes all user data (profile, sessions, messages) via cascading deletion
 - Deletion is permanent and complete
-- Users can view their own data (profile, history)
+- Users can view their own data (profile, history) via UI
 - No data retention after account deletion
+- Database-level access controls (row-level security) ensure data isolation
 - Clear privacy policy (even if basic)
 - Cookie consent not required for MVP (functional cookies only)
 
@@ -1813,10 +1815,11 @@ Red Flags requiring product reassessment:
 **Technical Deliverables:**
 - Astro project scaffolding with SSR
 - Supabase authentication integration
-- Database schema for users and sessions tables
+- Database schema: profiles, sessions, messages, scenarios tables with constraints
+- Initial scenario seeding (3 scenarios via SQL migration)
 - Claude Streaming API integration (scenario chat only)
 - Basic dual-chat UI layout (scenario side functional, helper placeholder)
-- Single scenario prompt template implemented
+- Single scenario prompt template implemented (.MD file)
 
 **Milestone Acceptance:**
 - User can register and log in
@@ -1864,13 +1867,13 @@ Red Flags requiring product reassessment:
 
 **Technical Deliverables:**
 - Helper chat LLM integration with streaming
-- Helper prompt template with personality
-- Session persistence logic (save every message)
-- Session restoration on page load
+- Helper prompt template (.MD file) with personality
+- Session persistence logic (save messages to normalized table)
+- Session restoration on page load (load from messages table)
 - Completion flag parsing
-- Scenario conclusion logic (message count tracking)
-- Remaining two scenario prompts (🎉 party, 🥙 kebab)
-- Single active session enforcement (database constraint)
+- Scenario conclusion logic (message count tracking via database)
+- Remaining two scenario prompts as .MD files (🎉 party, 🥙 kebab)
+- Single active session enforcement (unique database constraint)
 
 **Milestone Acceptance:**
 - Both chats fully functional
@@ -1922,15 +1925,16 @@ Red Flags requiring product reassessment:
 - US-040: Authentication Required (edge case handling)
 
 **Technical Deliverables:**
-- Rate limiting logic (weekly counter, UTC reset)
+- Rate limiting logic in application layer (weekly counter, UTC storage/reset)
 - Profile page with history display
-- History modal with dual-chat replay
+- History modal with dual-chat replay (load from messages table)
 - Comprehensive error handling with retry logic
-- Session expiration cron job
+- Automated cleanup for expired sessions and old logs (scheduled database functions)
+- Structured logging system with severity levels
 - Loading states and error messages in helper voice
 - Browser compatibility testing
 - Performance optimization
-- Security hardening (HTTPS, cookie settings)
+- Security hardening (HTTPS, cookie settings, row-level security)
 
 **Milestone Acceptance:**
 - Weekly limit enforced correctly
