@@ -48,13 +48,7 @@ export type MessageRole = Enums<"message_role">;
  */
 export type ScenarioListItemDTO = Pick<
   Tables<"scenarios">,
-  | "id"
-  | "title"
-  | "emoji"
-  | "sort_order"
-  | "is_active"
-  | "initial_message_main"
-  | "initial_message_helper"
+  "id" | "title" | "emoji" | "sort_order" | "is_active" | "initial_message_main" | "initial_message_helper"
 >;
 
 /**
@@ -73,10 +67,7 @@ export type ScenarioDetailDTO = Tables<"scenarios">;
  * Minimal scenario information for display alongside session data.
  * Includes only the essential fields needed for UI display.
  */
-export type ScenarioEmbedDTO = Pick<
-  Tables<"scenarios">,
-  "id" | "title" | "emoji"
->;
+export type ScenarioEmbedDTO = Pick<Tables<"scenarios">, "id" | "title" | "emoji">;
 
 /**
  * ScenariosListResponseDTO
@@ -84,9 +75,9 @@ export type ScenarioEmbedDTO = Pick<
  *
  * Response wrapper for the scenarios list endpoint.
  */
-export type ScenariosListResponseDTO = {
+export interface ScenariosListResponseDTO {
   scenarios: ScenarioListItemDTO[];
-};
+}
 
 // =============================================================================
 // Session DTOs
@@ -126,12 +117,7 @@ export type SessionCreatedDTO = Omit<SessionDTO, "messages"> & {
  */
 export type SessionCompletionDTO = Pick<
   Tables<"sessions">,
-  | "id"
-  | "is_completed"
-  | "completed_at"
-  | "duration_seconds"
-  | "message_count_main"
-  | "message_count_helper"
+  "id" | "is_completed" | "completed_at" | "duration_seconds" | "message_count_main" | "message_count_helper"
 >;
 
 // =============================================================================
@@ -146,10 +132,7 @@ export type SessionCompletionDTO = Pick<
  * a message in the UI. Does not include internal fields like user_id,
  * client_message_id, or created_at.
  */
-export type MessageDTO = Pick<
-  Tables<"messages">,
-  "id" | "role" | "chat_type" | "content" | "sent_at"
->;
+export type MessageDTO = Pick<Tables<"messages">, "id" | "role" | "chat_type" | "content" | "sent_at">;
 
 /**
  * MessageWithSessionDTO
@@ -177,13 +160,13 @@ export type MessageWithSessionDTO = MessageDTO & {
  * - completion_flag_detected: Whether the AI included the completion flag
  * - session: Completion details (only present if session_complete is true)
  */
-export type MessageResponseDTO = {
+export interface MessageResponseDTO {
   user_message: MessageDTO;
   assistant_message: MessageDTO;
   session_complete: boolean;
   completion_flag_detected: boolean;
   session?: SessionCompletionDTO;
-};
+}
 
 /**
  * MessagesListResponseDTO
@@ -191,10 +174,10 @@ export type MessageResponseDTO = {
  *
  * Response wrapper for message list endpoint, including pagination metadata.
  */
-export type MessagesListResponseDTO = {
+export interface MessagesListResponseDTO {
   messages: MessageWithSessionDTO[];
   pagination: PaginationDTO;
-};
+}
 
 // =============================================================================
 // Supporting Types
@@ -212,12 +195,12 @@ export type MessagesListResponseDTO = {
  * - total: Total number of items available
  * - has_more: Whether there are more items beyond this page
  */
-export type PaginationDTO = {
+export interface PaginationDTO {
   limit: number;
   offset: number;
   total: number;
   has_more: boolean;
-};
+}
 
 /**
  * HealthCheckServicesDTO
@@ -226,10 +209,10 @@ export type PaginationDTO = {
  * Status of individual services/dependencies.
  * Index signature allows for future service additions.
  */
-export type HealthCheckServicesDTO = {
+export interface HealthCheckServicesDTO {
   database: "connected" | "error";
   [key: string]: string;
-};
+}
 
 /**
  * HealthCheckDTO
@@ -242,11 +225,11 @@ export type HealthCheckServicesDTO = {
  * - timestamp: ISO 8601 timestamp of the health check
  * - services: Individual service statuses
  */
-export type HealthCheckDTO = {
+export interface HealthCheckDTO {
   status: "healthy" | "unhealthy";
   timestamp: string;
   services: HealthCheckServicesDTO;
-};
+}
 
 /**
  * ApiErrorDTO
@@ -267,11 +250,11 @@ export type HealthCheckDTO = {
  * - "api_failure" (500)
  * - "database_error" (500)
  */
-export type ApiErrorDTO = {
+export interface ApiErrorDTO {
   error: string;
   message: string;
-  details?: Record<string, any>;
-};
+  details?: Record<string, unknown>;
+}
 
 // =============================================================================
 // Command Models (Request Payloads)
@@ -287,9 +270,9 @@ export type ApiErrorDTO = {
  * - scenario_id must exist in scenarios table
  * - scenario must be active (is_active = true)
  */
-export type CreateSessionCommand = {
+export interface CreateSessionCommand {
   scenario_id: number;
-};
+}
 
 /**
  * SendMessageCommand
@@ -307,8 +290,8 @@ export type CreateSessionCommand = {
  * - content: The message text
  * - client_message_id: Optional UUID for idempotency (prevents duplicate processing)
  */
-export type SendMessageCommand = {
+export interface SendMessageCommand {
   chat_type: ChatType;
   content: string;
   client_message_id?: string;
-};
+}
