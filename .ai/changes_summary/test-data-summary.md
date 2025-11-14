@@ -63,7 +63,7 @@ curl http://localhost:4321/api/scenarios/1
 curl http://localhost:4321/api/sessions/11111111-1111-1111-1111-111111111111
 
 # Get active session with messages
-curl http://localhost:4321/api/sessions/22222222-2222-2222-2222-222222222222
+curl http://localhost:3000/api/sessions/22222222-2222-2222-2222-222222222222
 
 # Get session messages only
 curl http://localhost:4321/api/sessions/11111111-1111-1111-1111-111111111111/messages
@@ -77,7 +77,7 @@ curl -X POST http://localhost:4321/api/sessions \
   -d '{"scenario_id": 3}'
 
 # Send a message to the active session (Session 2)
-curl -X POST http://localhost:4321/api/sessions/22222222-2222-2222-2222-222222222222/messages \
+curl -X POST http://localhost:3000/api/sessions/22222222-2222-2222-2222-222222222222/messages \
   -H "Content-Type: application/json" \
   -d '{
     "chat_type": "main",
