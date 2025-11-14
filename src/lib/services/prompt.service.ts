@@ -226,11 +226,7 @@ export async function getMainChatPrompt(
   const systemPrompt = await readPromptFile(filePath);
 
   // Fetch message history
-  const history = await fetchMainChatHistory(
-    supabase,
-    sessionId,
-    PROMPT_CONFIG.main.maxMessages
-  );
+  const history = await fetchMainChatHistory(supabase, sessionId, PROMPT_CONFIG.main.maxMessages);
 
   // Format history for Claude
   const formattedHistory = formatMessageHistory(history);
@@ -301,16 +297,8 @@ export async function getHelperChatPrompt(
 
   // Fetch message histories
   const [mainHistory, helperHistory] = await Promise.all([
-    fetchMainChatHistory(
-      supabase,
-      sessionId,
-      PROMPT_CONFIG.helper.maxMainMessages
-    ),
-    fetchHelperChatHistory(
-      supabase,
-      sessionId,
-      PROMPT_CONFIG.helper.maxHelperMessages
-    ),
+    fetchMainChatHistory(supabase, sessionId, PROMPT_CONFIG.helper.maxMainMessages),
+    fetchHelperChatHistory(supabase, sessionId, PROMPT_CONFIG.helper.maxHelperMessages),
   ]);
 
   // Format histories
@@ -324,9 +312,7 @@ export async function getHelperChatPrompt(
 
   // Add main chat context if available
   if (mainHistory.length > 0) {
-    const mainContext = mainHistory
-      .map((msg) => `[${msg.role}]: ${msg.content}`)
-      .join("\n");
+    const mainContext = mainHistory.map((msg) => `[${msg.role}]: ${msg.content}`).join("\n");
 
     contextualSystemPrompt += `\n\n--- Recent Main Chat Context ---\n${mainContext}\n---`;
   }

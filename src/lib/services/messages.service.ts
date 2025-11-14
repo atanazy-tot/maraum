@@ -109,10 +109,7 @@ export async function getSessionMessages(
 
   // Add pagination using range (Supabase uses inclusive ranges)
   // range(0, 9) returns 10 items (indices 0-9)
-  messagesQuery = messagesQuery.range(
-    query.offset,
-    query.offset + query.limit - 1
-  );
+  messagesQuery = messagesQuery.range(query.offset, query.offset + query.limit - 1);
 
   // Step 3: Execute messages query
   const { data: messages, error: messagesError } = await messagesQuery;
@@ -126,10 +123,7 @@ export async function getSessionMessages(
 
   // Step 4: Get total count with same filters
   // Using separate count query for accuracy
-  let countQuery = supabase
-    .from("messages")
-    .select("*", { count: "exact", head: true })
-    .eq("session_id", sessionId);
+  let countQuery = supabase.from("messages").select("*", { count: "exact", head: true }).eq("session_id", sessionId);
 
   if (query.chat_type !== "all") {
     countQuery = countQuery.eq("chat_type", query.chat_type);
@@ -289,13 +283,10 @@ export async function validateSessionActive(
   }
 
   if (session.is_completed) {
-    throw new ConflictError(
-      "Cannot send messages to completed session. This conversation has concluded.",
-      {
-        session_id: sessionId,
-        completed_at: session.completed_at,
-      }
-    );
+    throw new ConflictError("Cannot send messages to completed session. This conversation has concluded.", {
+      session_id: sessionId,
+      completed_at: session.completed_at,
+    });
   }
 
   return session;
@@ -400,10 +391,7 @@ export async function saveAssistantMessage(
  * @returns Promise resolving to session completion DTO
  * @throws DatabaseError if database operations fail
  */
-export async function completeSession(
-  supabase: SupabaseClient,
-  sessionId: string
-): Promise<SessionCompletionDTO> {
+export async function completeSession(supabase: SupabaseClient, sessionId: string): Promise<SessionCompletionDTO> {
   // Update session to mark as completed
   // The database will automatically calculate duration_seconds via SQL
   const { data, error } = await supabase

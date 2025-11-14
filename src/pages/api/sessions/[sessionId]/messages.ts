@@ -25,12 +25,7 @@ import {
   completeSession,
   buildMessageResponseDTO,
 } from "@/lib/services/messages.service";
-import {
-  GetMessagesQuerySchema,
-  SendMessageParamsSchema,
-  SendMessageBodySchema,
-  isValidUUID,
-} from "@/lib/validation/messages.validation";
+import { GetMessagesQuerySchema, SendMessageBodySchema, isValidUUID } from "@/lib/validation/messages.validation";
 import { NotFoundError, DatabaseError, ConflictError, ApiError } from "@/lib/errors";
 import { logEvent, logError, logApiCall, logInfo } from "@/lib/utils/logger";
 import { callClaudeAPI } from "@/lib/services/claude-api.service";
@@ -193,7 +188,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     let requestBody;
     try {
       requestBody = await request.json();
-    } catch (parseError) {
+    } catch {
       const error: ApiErrorDTO = {
         error: "validation_error",
         message: "Invalid JSON in request body.",
@@ -241,11 +236,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     const session = await validateSessionActive(supabase, sessionId);
 
     // Step 4: Check idempotency
-    const existingMessages = await checkIdempotency(
-      supabase,
-      sessionId,
-      validatedBody.client_message_id
-    );
+    const existingMessages = await checkIdempotency(supabase, sessionId, validatedBody.client_message_id);
 
     if (existingMessages) {
       // Return existing messages (idempotent response)

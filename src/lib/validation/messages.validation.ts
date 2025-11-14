@@ -119,10 +119,7 @@ export const SendMessageBodySchema = z.object({
     .string({ required_error: "content is required" })
     .min(1, { message: "content cannot be empty" })
     .max(8000, { message: "content cannot exceed 8000 characters" }),
-  client_message_id: z
-    .string()
-    .uuid({ message: "client_message_id must be a valid UUID" })
-    .optional(),
+  client_message_id: z.string().uuid({ message: "client_message_id must be a valid UUID" }).optional(),
 });
 
 /**

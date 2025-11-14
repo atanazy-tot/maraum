@@ -22,6 +22,7 @@ import { ZodError } from "zod";
 
 import { getScenarioById } from "@/lib/services/scenarios.service";
 import { scenarioIdSchema } from "@/lib/validation/scenarios.validation";
+import { logError, logInfo } from "@/lib/services/logging.service";
 import type { ScenarioDetailDTO, ApiErrorDTO } from "@/types";
 
 // Disable prerendering for API routes (required for SSR)
@@ -51,6 +52,19 @@ export const GET: APIRoute = async (context) => {
           },
         };
 
+        // Log validation error
+        await logInfo(
+          context.locals.supabase,
+          "api_call_failed",
+          {
+            endpoint: "GET /api/scenarios/:scenarioId",
+            reason: "invalid_scenario_id",
+            provided_value: scenarioIdRaw,
+          },
+          null,
+          null
+        );
+
         return new Response(JSON.stringify(errorResponse), {
           status: 400,
           headers: { "Content-Type": "application/json" },
@@ -69,6 +83,19 @@ export const GET: APIRoute = async (context) => {
         message: `Scenario ${scenarioId} seems to have wandered off. Perhaps it never existed, or maybe it's just not available right now.`,
       };
 
+      // Log not found event
+      await logInfo(
+        supabase,
+        "api_call_failed",
+        {
+          endpoint: "GET /api/scenarios/:scenarioId",
+          scenario_id: scenarioId,
+          reason: "scenario_not_found",
+        },
+        null,
+        null
+      );
+
       return new Response(JSON.stringify(errorResponse), {
         status: 404,
         headers: { "Content-Type": "application/json" },
@@ -78,13 +105,39 @@ export const GET: APIRoute = async (context) => {
     // Return the scenario details
     const response: ScenarioDetailDTO = scenario;
 
+    // Log successful retrieval
+    await logInfo(
+      supabase,
+      "api_call_completed",
+      {
+        endpoint: "GET /api/scenarios/:scenarioId",
+        scenario_id: scenarioId,
+        scenario_title: scenario.title,
+      },
+      null,
+      null
+    );
+
     return new Response(JSON.stringify(response), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    // Log error (in production, this should use a structured logging service)
+    // Log error to console for debugging
     console.error("Error fetching scenario by ID:", error);
+
+    // Log database error
+    await logError(
+      context.locals.supabase,
+      "database_error",
+      {
+        endpoint: "GET /api/scenarios/:scenarioId",
+        scenario_id: context.params.scenarioId,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      null,
+      null
+    );
 
     // Return error response following the ApiErrorDTO format
     const errorResponse: ApiErrorDTO = {

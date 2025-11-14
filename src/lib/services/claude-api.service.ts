@@ -92,12 +92,9 @@ const getAnthropicClient = (): Anthropic => {
     const apiKey = import.meta.env.ANTHROPIC_API_KEY;
 
     if (!apiKey) {
-      throw new ApiError(
-        "Claude API key not configured. Please set ANTHROPIC_API_KEY environment variable.",
-        {
-          missing_env_var: "ANTHROPIC_API_KEY",
-        }
-      );
+      throw new ApiError("Claude API key not configured. Please set ANTHROPIC_API_KEY environment variable.", {
+        missing_env_var: "ANTHROPIC_API_KEY",
+      });
     }
 
     anthropicClient = new Anthropic({
@@ -117,8 +114,7 @@ const getAnthropicClient = (): Anthropic => {
 /**
  * Sleep utility for retry delays
  */
-const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Gets configuration for specific chat type
@@ -145,9 +141,7 @@ const removeCompletionFlag = (content: string): string => {
  * Extracts text content from Claude API response
  */
 const extractContent = (response: Anthropic.Message): string => {
-  const textContent = response.content.find(
-    (block): block is Anthropic.TextBlock => block.type === "text"
-  );
+  const textContent = response.content.find((block): block is Anthropic.TextBlock => block.type === "text");
 
   if (!textContent) {
     throw new ApiError("No text content in Claude API response", {
@@ -161,10 +155,7 @@ const extractContent = (response: Anthropic.Message): string => {
 /**
  * Wraps SDK call with timeout using AbortController
  */
-const callWithTimeout = async <T>(
-  promise: Promise<T>,
-  timeoutMs: number
-): Promise<T> => {
+const callWithTimeout = async <T>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -281,10 +272,7 @@ const handleSDKError = (error: unknown, context: { chatType: ChatType }): never 
  * console.log(result.usage.output_tokens); // For logging/metrics
  * ```
  */
-export async function callClaudeAPI(
-  messages: ClaudeMessage[],
-  chatType: ChatType
-): Promise<ClaudeAPIResult> {
+export async function callClaudeAPI(messages: ClaudeMessage[], chatType: ChatType): Promise<ClaudeAPIResult> {
   // Get Anthropic client
   const client = getAnthropicClient();
 
@@ -351,14 +339,11 @@ export async function callClaudeAPI(
 
       // If this was the last attempt, throw the error
       if (attempt === CLAUDE_CONFIG.retry.attempts - 1) {
-        throw new ApiError(
-          "Claude API failed after multiple attempts. Your message was saved; please try again.",
-          {
-            retry_count: CLAUDE_CONFIG.retry.attempts,
-            last_error: lastError.message,
-            chat_type: chatType,
-          }
-        );
+        throw new ApiError("Claude API failed after multiple attempts. Your message was saved; please try again.", {
+          retry_count: CLAUDE_CONFIG.retry.attempts,
+          last_error: lastError.message,
+          chat_type: chatType,
+        });
       }
 
       // Wait before retrying
@@ -379,9 +364,7 @@ export async function callClaudeAPI(
  * @param history - Array of messages from database with role and content
  * @returns Array of MessageParam objects for SDK
  */
-export function formatMessagesForClaude(
-  history: Array<{ role: string; content: string }>
-): ClaudeMessage[] {
+export function formatMessagesForClaude(history: { role: string; content: string }[]): ClaudeMessage[] {
   return history.map((msg) => ({
     role: msg.role === "user" ? "user" : "assistant",
     content: msg.content,
@@ -391,13 +374,8 @@ export function formatMessagesForClaude(
 /**
  * Type guard to check if a value is a valid MessageParam
  */
-export function isValidClaudeMessage(
-  value: unknown
-): value is Anthropic.MessageParam {
+export function isValidClaudeMessage(value: unknown): value is Anthropic.MessageParam {
   if (typeof value !== "object" || value === null) return false;
   const msg = value as Record<string, unknown>;
-  return (
-    (msg.role === "user" || msg.role === "assistant") &&
-    typeof msg.content === "string"
-  );
+  return (msg.role === "user" || msg.role === "assistant") && typeof msg.content === "string";
 }
