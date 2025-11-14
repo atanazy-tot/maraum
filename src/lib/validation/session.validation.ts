@@ -29,23 +29,33 @@ export const sessionIdSchema = z.string().uuid({
  * - include_messages: Whether to include message history (default: true)
  *
  * This schema:
- * - Coerces string inputs to booleans ("true", "false", "1", "0")
+ * - Strictly validates boolean string representations ("true", "false", "1", "0")
+ * - Rejects invalid values like "maybe", "yes", "banana"
  * - Uses default value of true when not provided
+ * - Transforms valid strings to actual boolean values
  *
  * Valid examples:
  * - {} (empty object uses default true)
- * - { include_messages: "true" }
- * - { include_messages: "false" }
- * - { include_messages: true }
- * - { include_messages: 1 }
- * - { include_messages: 0 }
+ * - { include_messages: "true" } → true
+ * - { include_messages: "false" } → false
+ * - { include_messages: "1" } → true
+ * - { include_messages: "0" } → false
  *
- * Invalid examples:
- * - { include_messages: "maybe" } - cannot be coerced to boolean
- * - { include_messages: "yes" } - cannot be coerced to boolean
+ * Invalid examples (will throw ZodError):
+ * - { include_messages: "maybe" } - not a valid boolean representation
+ * - { include_messages: "yes" } - not a valid boolean representation
+ * - { include_messages: "banana" } - not a valid boolean representation
  */
 export const getSessionQuerySchema = z.object({
-  include_messages: z.coerce.boolean().default(true),
+  include_messages: z
+    .enum(["true", "false", "1", "0"], {
+      errorMap: () => ({
+        message: "Must be a boolean value (true, false, 1, or 0)",
+      }),
+    })
+    .optional()
+    .default("true")
+    .transform((val) => val === "true" || val === "1"),
 });
 
 /**

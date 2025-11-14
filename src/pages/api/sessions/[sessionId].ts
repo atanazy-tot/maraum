@@ -28,6 +28,7 @@ import { getSessionById } from "@/lib/services/session.service";
 import { sessionIdSchema, getSessionQuerySchema } from "@/lib/validation/session.validation";
 import { logError, logInfo } from "@/lib/services/logging.service";
 import { DatabaseError } from "@/lib/errors";
+import { getStandardHeaders } from "@/lib/utils/response-headers";
 import type { SessionDTO, ApiErrorDTO } from "@/types";
 
 // Disable prerendering for API routes (required for SSR)
@@ -47,6 +48,9 @@ export const prerender = false;
  * @returns Response with SessionDTO or ApiErrorDTO
  */
 export const GET: APIRoute = async (context) => {
+  // Track request duration for performance monitoring
+  const startTime = Date.now();
+
   // Extract sessionId from path parameters
   const sessionIdRaw = context.params.sessionId;
 
@@ -84,7 +88,7 @@ export const GET: APIRoute = async (context) => {
 
         return new Response(JSON.stringify(errorResponse), {
           status: 400,
-          headers: { "Content-Type": "application/json" },
+          headers: getStandardHeaders(),
         });
       }
       throw validationError;
@@ -94,14 +98,13 @@ export const GET: APIRoute = async (context) => {
     // Step 2: Validate query parameters
     // =========================================================================
     const url = new URL(context.request.url);
-    const includeMessagesRaw = url.searchParams.get("include_messages");
+    const rawQuery = Object.fromEntries(url.searchParams.entries());
 
     let includeMessages: boolean;
     try {
       // Parse query parameters with defaults
-      const queryParams = getSessionQuerySchema.parse({
-        include_messages: includeMessagesRaw,
-      });
+      // Using Object.fromEntries ensures missing params are undefined, not null
+      const queryParams = getSessionQuerySchema.parse(rawQuery);
       includeMessages = queryParams.include_messages;
     } catch (validationError) {
       if (validationError instanceof ZodError) {
@@ -110,7 +113,7 @@ export const GET: APIRoute = async (context) => {
           message: "I need a simple yes or no. This boolean ambiguity is exhausting.",
           details: {
             field: "include_messages",
-            value: includeMessagesRaw,
+            value: rawQuery.include_messages,
             issue: "Must be boolean value (true, false, 1, 0)",
           },
         };
@@ -124,7 +127,7 @@ export const GET: APIRoute = async (context) => {
             session_id: sessionId,
             reason: "invalid_query_parameter",
             field: "include_messages",
-            provided_value: includeMessagesRaw,
+            provided_value: rawQuery.include_messages,
           },
           sessionId,
           null
@@ -132,7 +135,7 @@ export const GET: APIRoute = async (context) => {
 
         return new Response(JSON.stringify(errorResponse), {
           status: 400,
-          headers: { "Content-Type": "application/json" },
+          headers: getStandardHeaders(),
         });
       }
       throw validationError;
@@ -173,7 +176,7 @@ export const GET: APIRoute = async (context) => {
 
       return new Response(JSON.stringify(errorResponse), {
         status: 404,
-        headers: { "Content-Type": "application/json" },
+        headers: getStandardHeaders(),
       });
     }
 
@@ -181,6 +184,9 @@ export const GET: APIRoute = async (context) => {
     // Step 5: Return successful response
     // =========================================================================
     const response: SessionDTO = session;
+
+    // Calculate request duration for performance monitoring
+    const duration = Date.now() - startTime;
 
     // Log successful retrieval
     await logInfo(
@@ -192,6 +198,7 @@ export const GET: APIRoute = async (context) => {
         include_messages: includeMessages,
         message_count: includeMessages && session.messages ? session.messages.length : 0,
         is_completed: session.is_completed,
+        duration_ms: duration,
       },
       sessionId,
       session.user_id
@@ -199,7 +206,7 @@ export const GET: APIRoute = async (context) => {
 
     return new Response(JSON.stringify(response), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: getStandardHeaders(),
     });
   } catch (error) {
     // =========================================================================
@@ -236,7 +243,7 @@ export const GET: APIRoute = async (context) => {
 
       return new Response(JSON.stringify(errorResponse), {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: getStandardHeaders(),
       });
     }
 
