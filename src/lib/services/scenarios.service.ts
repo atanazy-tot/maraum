@@ -20,9 +20,7 @@ import type { ScenarioListItemDTO, ScenarioDetailDTO } from "@/types";
  * @returns Promise resolving to an array of scenario list items
  * @throws Error if the database query fails
  */
-export async function getActiveScenarios(
-  supabase: SupabaseClient,
-): Promise<ScenarioListItemDTO[]> {
+export async function getActiveScenarios(supabase: SupabaseClient): Promise<ScenarioListItemDTO[]> {
   const { data, error } = await supabase
     .from("scenarios")
     .select("id, title, emoji, sort_order, is_active, initial_message_main, initial_message_helper")
@@ -48,16 +46,8 @@ export async function getActiveScenarios(
  * @returns Promise resolving to the scenario details or null if not found
  * @throws Error if the database query fails
  */
-export async function getScenarioById(
-  supabase: SupabaseClient,
-  id: number,
-): Promise<ScenarioDetailDTO | null> {
-  const { data, error } = await supabase
-    .from("scenarios")
-    .select("*")
-    .eq("id", id)
-    .eq("is_active", true)
-    .single();
+export async function getScenarioById(supabase: SupabaseClient, id: number): Promise<ScenarioDetailDTO | null> {
+  const { data, error } = await supabase.from("scenarios").select("*").eq("id", id).eq("is_active", true).single();
 
   if (error) {
     // Supabase returns PGRST116 error code when no rows are found with .single()
