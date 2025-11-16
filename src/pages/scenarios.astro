@@ -1,0 +1,124 @@
+---
+/**
+ * Scenario Selection Page - Landing page for choosing language scenarios
+ *
+ * Server-Side Responsibilities:
+ * - Fetch all active scenarios from the database
+ * - Fetch user's active session (if any) to prevent multiple concurrent sessions
+ * - Fetch weekly usage stats to enforce rate limiting (3 scenarios per week)
+ * - Pass serialized data to React component for client-side interaction
+ *
+ * Route: /scenarios
+ * Authentication: None required for MVP (will be added later)
+ */
+
+import Layout from "@/layouts/Layout.astro";
+import { ScenarioSelectionSection } from "@/components/scenarios/ScenarioSelectionSection";
+import type { ScenarioSelectionPageProps, ActiveSessionSummary, WeeklyUsageDTO } from "@/types";
+
+// =============================================================================
+// Server-Side Data Fetching
+// =============================================================================
+
+// Extract Supabase client from context.locals (injected by middleware)
+const supabase = Astro.locals.supabase;
+
+// Fetch scenarios from API endpoint
+let scenarios;
+let activeSession: ActiveSessionSummary | null = null;
+let weeklyUsage: WeeklyUsageDTO;
+
+try {
+  // Fetch scenarios using internal API
+  const scenariosResponse = await fetch(`${Astro.url.origin}/api/scenarios`);
+
+  if (!scenariosResponse.ok) {
+    throw new Error(`Failed to fetch scenarios: ${scenariosResponse.status}`);
+  }
+
+  const scenariosData = await scenariosResponse.json();
+  scenarios = scenariosData.scenarios;
+} catch (error) {
+  console.error("[SCENARIOS PAGE] Error fetching scenarios:", error);
+  // For now, redirect to error or show error state
+  // In production, this would render an error component
+  scenarios = [];
+}
+
+// TODO: Implement GET /api/sessions/active endpoint to fetch active session
+// For now, use mock data for development/testing
+// When implemented, this should query: sessions WHERE user_id = :userId AND is_completed = false
+// Query:
+//   SELECT s.id as session_id, s.scenario_id, sc.title as scenario_title, s.started_at
+//   FROM sessions s
+//   JOIN scenarios sc ON s.scenario_id = sc.id
+//   WHERE s.user_id = :userId AND s.is_completed = false
+//   LIMIT 1
+try {
+  // TODO: Replace with actual API call when endpoint exists
+  // const activeSessionResponse = await fetch(`${Astro.url.origin}/api/sessions/active`);
+  // if (activeSessionResponse.ok) {
+  //   activeSession = await activeSessionResponse.json();
+  // }
+
+  // Mock: No active session for now
+  activeSession = null;
+} catch (error) {
+  console.error("[SCENARIOS PAGE] Error fetching active session:", error);
+  activeSession = null;
+}
+
+// TODO: Implement GET /api/profile/usage endpoint to fetch weekly usage stats
+// For now, use mock data for development/testing
+// When implemented, this should query the profiles table for:
+//   - current_week_completion_count (completedCount)
+//   - week_reset_date (resetDateIso)
+// Query:
+//   SELECT current_week_completion_count, week_reset_date
+//   FROM profiles
+//   WHERE id = :userId
+try {
+  // TODO: Replace with actual API call when endpoint exists
+  // const usageResponse = await fetch(`${Astro.url.origin}/api/profile/usage`);
+  // if (usageResponse.ok) {
+  //   weeklyUsage = await usageResponse.json();
+  // }
+
+  // Mock: Default usage (0/3, resets next Monday)
+  const nextMonday = new Date();
+  nextMonday.setDate(nextMonday.getDate() + ((7 - nextMonday.getDay() + 1) % 7 || 7));
+  nextMonday.setHours(0, 0, 0, 0);
+
+  weeklyUsage = {
+    completedCount: 0,
+    limit: 3,
+    resetDateIso: nextMonday.toISOString(),
+  };
+} catch (error) {
+  console.error("[SCENARIOS PAGE] Error fetching weekly usage:", error);
+
+  // Fallback to default usage
+  const nextMonday = new Date();
+  nextMonday.setDate(nextMonday.getDate() + ((7 - nextMonday.getDay() + 1) % 7 || 7));
+  nextMonday.setHours(0, 0, 0, 0);
+
+  weeklyUsage = {
+    completedCount: 0,
+    limit: 3,
+    resetDateIso: nextMonday.toISOString(),
+  };
+}
+
+// Prepare props for React component
+const pageProps: ScenarioSelectionPageProps = {
+  scenarios,
+  weeklyUsage,
+  activeSession,
+};
+
+const pageTitle = "Choose Your Scenario - Maraum";
+---
+
+<Layout title={pageTitle}>
+  <ScenarioSelectionSection data={pageProps} client:load />
+</Layout>

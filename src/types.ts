@@ -295,3 +295,130 @@ export interface SendMessageCommand {
   content: string;
   client_message_id?: string;
 }
+
+// =============================================================================
+// Scenario Selection View Models
+// =============================================================================
+
+/**
+ * ScenarioSelectionPageProps
+ * Used in: pages/scenarios.astro SSR data hydration
+ *
+ * Contains all data needed to render the scenario selection page.
+ *
+ * Fields:
+ * - scenarios: List of all scenarios available for selection
+ * - weeklyUsage: User's weekly completion stats and reset date
+ * - activeSession: Current active session details (if any)
+ */
+export interface ScenarioSelectionPageProps {
+  scenarios: ScenarioListItemDTO[];
+  weeklyUsage: WeeklyUsageDTO;
+  activeSession: ActiveSessionSummary | null;
+}
+
+/**
+ * ActiveSessionSummary
+ * Used in: Scenario selection page to indicate ongoing session
+ *
+ * Contains minimal information about an active session to enable
+ * resume functionality and prevent multiple concurrent sessions.
+ *
+ * Fields:
+ * - session_id: UUID of the active session
+ * - scenario_id: ID of the scenario being played
+ * - scenario_title: Display name for the scenario
+ * - started_at: ISO timestamp when session was created
+ */
+export interface ActiveSessionSummary {
+  session_id: string;
+  scenario_id: number;
+  scenario_title: string;
+  started_at: string; // ISO
+}
+
+/**
+ * WeeklyUsageDTO
+ * Used in: Scenario selection page rate limiting display
+ *
+ * Tracks user's weekly scenario completion progress against the limit.
+ *
+ * Fields:
+ * - completedCount: Number of scenarios completed this week (0-3)
+ * - limit: Maximum allowed completions per week (always 3)
+ * - resetDateIso: ISO timestamp when the weekly counter resets (Monday 00:00 UTC)
+ */
+export interface WeeklyUsageDTO {
+  completedCount: number;
+  limit: number; // 3
+  resetDateIso: string;
+}
+
+/**
+ * ScenarioDisplayModel
+ * Used in: Scenario selection carousel tiles
+ *
+ * Simplified scenario model for rendering selection UI.
+ * Derived from ScenarioListItemDTO.
+ *
+ * Fields:
+ * - id: Scenario ID for API calls
+ * - title: Display name
+ * - emoji: Visual identifier (🛒, 🎉, 🥙)
+ * - initialMessages: Starting messages for both chat panels
+ * - isActive: Whether scenario is available for selection
+ */
+export interface ScenarioDisplayModel {
+  id: number;
+  title: string;
+  emoji: string;
+  initialMessages: {
+    main: string;
+    helper: string;
+  };
+  isActive: boolean; // from backend is_active flag
+}
+
+/**
+ * ScenarioActionState
+ * Used in: Tracking per-scenario POST request states
+ *
+ * Maps scenario ID to its current action state (idle, starting, error).
+ * Used to show loading spinners and error messages on tiles.
+ */
+export type ScenarioActionState = Record<
+  number,
+  {
+    status: "idle" | "starting" | "error";
+    error?: ApiErrorDTO;
+  }
+>;
+
+/**
+ * ScenarioCarouselState
+ * Used in: Carousel navigation logic
+ *
+ * Tracks which scenarios are currently visible in the carousel window.
+ *
+ * Fields:
+ * - visibleStartIndex: Index of first visible scenario (0-based)
+ * - visibleCount: Number of scenarios shown at once (always 3 when possible)
+ * - hasPrev: Whether left scroll button should be enabled
+ * - hasNext: Whether right scroll button should be enabled
+ */
+export interface ScenarioCarouselState {
+  visibleStartIndex: number;
+  visibleCount: number; // always 3 when possible
+  hasPrev: boolean;
+  hasNext: boolean;
+}
+
+/**
+ * StatusBannerVariant
+ * Used in: Unified StatusBanner component
+ *
+ * Determines which banner content to display when tiles are disabled.
+ * - 'active-session': User has an ongoing session they can resume
+ * - 'rate-limit': User has reached weekly completion limit
+ */
+export type StatusBannerVariant = "active-session" | "rate-limit";
