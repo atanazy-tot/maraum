@@ -20,7 +20,7 @@ export function MessageList({ messages, chatType }: MessageListProps) {
 
   return (
     <div
-      className="flex flex-col gap-4 p-6 overflow-y-auto"
+      className="h-full overflow-y-auto flex flex-col gap-4 p-6"
       onScroll={handleScroll}
       ref={containerRef}
     >

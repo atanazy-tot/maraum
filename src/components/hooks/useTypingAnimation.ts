@@ -8,17 +8,24 @@ import { useState, useEffect } from "react";
  *
  * @param text - The full text to display
  * @param speed - Milliseconds per character (default: 20ms = ~50 chars/second)
+ * @param enabled - When false, animation is skipped and text renders instantly
  * @returns The text revealed so far
  *
  * @example
  * const displayText = useTypingAnimation(message.content, 20);
  */
-export function useTypingAnimation(text: string, speed: number = 20): string {
-  const [displayedText, setDisplayedText] = useState("");
+export function useTypingAnimation(
+  text: string,
+  speed: number = 20,
+  enabled: boolean = true
+): string {
+  const [displayedText, setDisplayedText] = useState(() =>
+    enabled ? "" : text
+  );
 
   useEffect(() => {
-    if (!text) {
-      setDisplayedText("");
+    if (!enabled) {
+      setDisplayedText(text);
       return;
     }
 
@@ -42,6 +49,7 @@ export function useTypingAnimation(text: string, speed: number = 20): string {
       }
     };
 
+    setDisplayedText("");
     animationFrame = requestAnimationFrame(animate);
 
     return () => {
@@ -49,7 +57,7 @@ export function useTypingAnimation(text: string, speed: number = 20): string {
         cancelAnimationFrame(animationFrame);
       }
     };
-  }, [text, speed]);
+  }, [text, speed, enabled]);
 
   return displayedText;
 }

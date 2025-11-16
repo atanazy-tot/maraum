@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useRef,
+  useCallback,
+} from "react";
 import type {
   SessionContextValue,
   SessionProviderProps,
@@ -40,12 +46,29 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
   initialMainMessages,
   initialHelperMessages,
 }) => {
+  const animatedMessageIdsRef = useRef<Set<string>>(
+    new Set([
+      ...initialMainMessages.map((message) => message.id),
+      ...initialHelperMessages.map((message) => message.id),
+    ])
+  );
+
   const [session, setSession] = useState(initialSession);
   const [mainMessages, setMainMessages] = useState<MessageDTO[]>(initialMainMessages);
   const [helperMessages, setHelperMessages] = useState<MessageDTO[]>(initialHelperMessages);
   const [isMainLoading, setIsMainLoading] = useState(false);
   const [isHelperLoading, setIsHelperLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const hasAnimatedMessage = useCallback((messageId: string) => {
+    return animatedMessageIdsRef.current.has(messageId);
+  }, []);
+
+  const markMessageAnimated = useCallback((messageId: string) => {
+    animatedMessageIdsRef.current.add(messageId);
+  }, []);
+
+  const clearError = useCallback(() => setError(null), []);
 
   /**
    * sendMainMessage
@@ -263,7 +286,9 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     sendMainMessage,
     sendHelperMessage,
     error,
-    clearError: () => setError(null),
+    clearError,
+    hasAnimatedMessage,
+    markMessageAnimated,
   };
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

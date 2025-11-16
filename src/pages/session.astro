@@ -28,16 +28,24 @@ import type { SessionDTO, MessageDTO } from "@/types";
 // Extract session ID from query parameters
 const sessionId = Astro.url.searchParams.get("id");
 
+// eslint-disable-next-line no-console
+console.log("[SESSION PAGE] Requested session ID:", sessionId);
+// eslint-disable-next-line no-console
+console.log("[SESSION PAGE] Full URL:", Astro.url.href);
+
 // Validation: Session ID must be present
 if (!sessionId) {
+  // eslint-disable-next-line no-console
+  console.log("[SESSION PAGE] Redirecting: No session ID provided");
   return Astro.redirect("/scenarios?error=session_id_required");
 }
 
 // Validation: Session ID must be valid UUID format
-// Simple UUID v4 regex validation
-const uuidRegex =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// Accept any UUID format (not just v4)
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 if (!uuidRegex.test(sessionId)) {
+  // eslint-disable-next-line no-console
+  console.log("[SESSION PAGE] Redirecting: Invalid UUID format");
   return Astro.redirect("/scenarios?error=invalid_session_id");
 }
 
@@ -45,15 +53,19 @@ if (!uuidRegex.test(sessionId)) {
 let sessionData: SessionDTO;
 
 try {
-  const response = await fetch(
-    `${Astro.url.origin}/api/sessions/${sessionId}?include_messages=true`,
-    {
-      headers: {
-        // Pass through any authentication headers if needed in future
-        // For MVP, no auth required
-      },
-    }
-  );
+  const apiUrl = `${Astro.url.origin}/api/sessions/${sessionId}?include_messages=true`;
+  // eslint-disable-next-line no-console
+  console.log("[SESSION PAGE] Fetching session from:", apiUrl);
+
+  const response = await fetch(apiUrl, {
+    headers: {
+      // Pass through any authentication headers if needed in future
+      // For MVP, no auth required
+    },
+  });
+
+  // eslint-disable-next-line no-console
+  console.log("[SESSION PAGE] Response status:", response.status, response.statusText);
 
   if (!response.ok) {
     if (response.status === 404) {
@@ -69,10 +81,13 @@ try {
   }
 
   sessionData = await response.json();
+  // eslint-disable-next-line no-console
+  console.log("[SESSION PAGE] Session data loaded successfully:", sessionData.id);
 } catch (error) {
   // Network error or unexpected failure - could render error page
   // For now, redirect to scenarios with generic error
-  console.error("Session fetch error:", error);
+  // eslint-disable-next-line no-console
+  console.error("[SESSION PAGE] Session fetch error:", error);
   return Astro.redirect("/scenarios?error=session_load_failed");
 }
 
@@ -88,7 +103,8 @@ const helperMessages: MessageDTO[] = messages.filter((m) => m.chat_type === "hel
 
 // Remove messages from session object to avoid duplication
 // Client components receive them as separate props
-const { messages: _, ...session } = sessionData;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const { messages: _messages, ...session } = sessionData;
 
 // Page title includes scenario name for better UX
 const pageTitle = `${session.scenario.title} - Maraum`;
