@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useTypingAnimation } from "@/components/hooks/useTypingAnimation";
 import { useSession } from "./SessionContext";
 import type { MessageProps } from "@/types/session-view.types";
@@ -19,18 +19,20 @@ export function Message({ message, chatType }: MessageProps) {
   const isUser = message.role === "user";
 
   const { hasAnimatedMessage, markMessageAnimated } = useSession();
-  const shouldAnimate = !isUser && !hasAnimatedMessage(message.id);
+  const shouldAnimateRef = useRef(
+    !isUser && !hasAnimatedMessage(message.id)
+  );
 
   useEffect(() => {
-    if (shouldAnimate) {
+    if (shouldAnimateRef.current) {
       markMessageAnimated(message.id);
     }
-  }, [shouldAnimate, markMessageAnimated, message.id]);
+  }, [markMessageAnimated, message.id]);
 
   // Apply typing animation only for assistant messages
   const displayText = isUser
     ? message.content
-    : useTypingAnimation(message.content, 20, shouldAnimate);
+    : useTypingAnimation(message.content, 20, shouldAnimateRef.current);
 
   // Format timestamp to local time
   const formatTimestamp = (isoString: string) => {
