@@ -30,7 +30,7 @@ export function ScenarioCarousel({ children, visibleState, onScroll }: ScenarioC
   const { visibleStartIndex, visibleCount, hasPrev, hasNext } = visibleState;
 
   return (
-    <div className="relative">
+    <div className="relative" role="region" aria-label="Scenario carousel">
       {/* Carousel Container */}
       <div className="flex items-center gap-4">
         {/* Left Scroll Button */}
