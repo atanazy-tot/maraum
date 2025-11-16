@@ -29,9 +29,9 @@ import type {
 import { ScenarioStatusHeader } from "./ScenarioStatusHeader";
 import { StatusBanner } from "./StatusBanner";
 import { ScenarioCarousel } from "./ScenarioCarousel";
-// import { ErrorStatePanel } from "./ErrorStatePanel"; // TODO: Implement
-// import { ScenarioGridSkeleton } from "./ScenarioGridSkeleton"; // TODO: Implement
-// import { ScenarioTile } from "./ScenarioTile"; // TODO: Implement
+import { ScenarioTile } from "./ScenarioTile";
+import { ErrorStatePanel } from "./ErrorStatePanel";
+import { ScenarioGridSkeleton } from "./ScenarioGridSkeleton";
 
 /**
  * Props for ScenarioSelectionSection
@@ -238,34 +238,12 @@ export function ScenarioSelectionSection({ data }: ScenarioSelectionSectionProps
 
   // Show error panel if initial data fetch failed
   if (apiError) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        {/* <ErrorStatePanel error={apiError} onRetry={handleRefresh} /> */}
-        <div className="text-center">
-          <h2 className="text-xl font-semibold">Error Loading Scenarios</h2>
-          <p className="mt-2 text-gray-600">{apiError.message}</p>
-          <button
-            onClick={handleRefresh}
-            className="mt-4 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
+    return <ErrorStatePanel error={apiError} onRetry={handleRefresh} />;
   }
 
   // Show loading skeleton while refetching
   if (isRefetching) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        {/* <ScenarioGridSkeleton /> */}
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-          <p className="mt-4 text-gray-600">Loading scenarios...</p>
-        </div>
-      </div>
-    );
+    return <ScenarioGridSkeleton />;
   }
 
   // Main render
@@ -288,28 +266,15 @@ export function ScenarioSelectionSection({ data }: ScenarioSelectionSectionProps
           {/* Carousel - Always visible */}
           <div className="mb-8">
             <ScenarioCarousel visibleState={carouselState} onScroll={handleScroll}>
-              {/* TODO: Replace with ScenarioTile components */}
               {displayScenarios.map((scenario) => (
-                <div
+                <ScenarioTile
                   key={scenario.id}
-                  className={`flex flex-col items-center justify-center rounded-lg border-2 p-8 ${
-                    allTilesDisabled
-                      ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-50 grayscale"
-                      : "cursor-pointer border-gray-300 bg-white hover:border-blue-500 hover:shadow-lg"
-                  }`}
-                  onClick={() => !allTilesDisabled && handleStartScenario(scenario.id)}
-                >
-                  <div className="text-6xl">{scenario.emoji}</div>
-                  <h3 className="mt-4 text-xl font-semibold text-gray-900">{scenario.title}</h3>
-                  {actionState[scenario.id]?.status === "starting" && (
-                    <div className="mt-2 text-sm text-gray-500">Starting...</div>
-                  )}
-                  {actionState[scenario.id]?.status === "error" && (
-                    <div className="mt-2 text-sm text-red-500">
-                      {actionState[scenario.id].error?.message || "Error"}
-                    </div>
-                  )}
-                </div>
+                  scenario={scenario}
+                  isDisabled={allTilesDisabled}
+                  status={actionState[scenario.id]?.status || "idle"}
+                  errorMessage={actionState[scenario.id]?.error?.message}
+                  onClick={() => handleStartScenario(scenario.id)}
+                />
               ))}
             </ScenarioCarousel>
           </div>
