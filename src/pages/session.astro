@@ -1,0 +1,104 @@
+---
+/**
+ * Session Page - Active Dual-Chat Interface
+ *
+ * Primary route for the core German language practice experience.
+ * Displays a split-screen dual-chat interface where users engage with:
+ * - Left panel (魔): German scenario chat with LLM NPC
+ * - Right panel (間): English helper chat with AI companion
+ *
+ * Server-Side Responsibilities:
+ * - Validate session ID from query parameter
+ * - Fetch session data with message history
+ * - Separate messages by chat type for client consumption
+ * - Handle errors with redirects to scenario selection
+ *
+ * Route: /session?id={sessionId}
+ * Query Params: id (required, UUID v4)
+ */
+
+import Layout from "@/layouts/Layout.astro";
+import { DualChatInterface } from "@/components/session/DualChatInterface";
+import type { SessionDTO, MessageDTO } from "@/types";
+
+// =============================================================================
+// Server-Side Data Fetching and Validation
+// =============================================================================
+
+// Extract session ID from query parameters
+const sessionId = Astro.url.searchParams.get("id");
+
+// Validation: Session ID must be present
+if (!sessionId) {
+  return Astro.redirect("/scenarios?error=session_id_required");
+}
+
+// Validation: Session ID must be valid UUID format
+// Simple UUID v4 regex validation
+const uuidRegex =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+if (!uuidRegex.test(sessionId)) {
+  return Astro.redirect("/scenarios?error=invalid_session_id");
+}
+
+// Fetch session data with messages from API
+let sessionData: SessionDTO;
+
+try {
+  const response = await fetch(
+    `${Astro.url.origin}/api/sessions/${sessionId}?include_messages=true`,
+    {
+      headers: {
+        // Pass through any authentication headers if needed in future
+        // For MVP, no auth required
+      },
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      // Session not found - redirect to scenarios page
+      return Astro.redirect("/scenarios?error=session_not_found");
+    } else if (response.status === 400) {
+      // Invalid session ID format
+      return Astro.redirect("/scenarios?error=invalid_session_id");
+    } else {
+      // Other errors (500, etc.) - throw to trigger error page
+      throw new Error(`Failed to load session: ${response.status}`);
+    }
+  }
+
+  sessionData = await response.json();
+} catch (error) {
+  // Network error or unexpected failure - could render error page
+  // For now, redirect to scenarios with generic error
+  console.error("Session fetch error:", error);
+  return Astro.redirect("/scenarios?error=session_load_failed");
+}
+
+// =============================================================================
+// Data Transformation for Client Components
+// =============================================================================
+
+// Separate messages by chat type for easier client-side consumption
+// This avoids filtering on every render in the React components
+const messages = sessionData.messages || [];
+const mainMessages: MessageDTO[] = messages.filter((m) => m.chat_type === "main");
+const helperMessages: MessageDTO[] = messages.filter((m) => m.chat_type === "helper");
+
+// Remove messages from session object to avoid duplication
+// Client components receive them as separate props
+const { messages: _, ...session } = sessionData;
+
+// Page title includes scenario name for better UX
+const pageTitle = `${session.scenario.title} - Maraum`;
+---
+
+<Layout title={pageTitle}>
+  <DualChatInterface
+    initialSession={session}
+    initialMainMessages={mainMessages}
+    initialHelperMessages={helperMessages}
+    client:load
+  />
+</Layout>
