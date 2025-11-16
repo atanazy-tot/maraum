@@ -25,12 +25,13 @@ import type {
   ScenarioListItemDTO,
 } from "@/types";
 
-// Child components (to be implemented)
-// import { ScenarioStatusHeader } from "./ScenarioStatusHeader";
-// import { StatusBanner } from "./StatusBanner";
-// import { ScenarioCarousel } from "./ScenarioCarousel";
-// import { ErrorStatePanel } from "./ErrorStatePanel";
-// import { ScenarioGridSkeleton } from "./ScenarioGridSkeleton";
+// Child components
+import { ScenarioStatusHeader } from "./ScenarioStatusHeader";
+import { StatusBanner } from "./StatusBanner";
+import { ScenarioCarousel } from "./ScenarioCarousel";
+// import { ErrorStatePanel } from "./ErrorStatePanel"; // TODO: Implement
+// import { ScenarioGridSkeleton } from "./ScenarioGridSkeleton"; // TODO: Implement
+// import { ScenarioTile } from "./ScenarioTile"; // TODO: Implement
 
 /**
  * Props for ScenarioSelectionSection
@@ -271,105 +272,57 @@ export function ScenarioSelectionSection({ data }: ScenarioSelectionSectionProps
   return (
     <div className="flex min-h-screen flex-col">
       {/* Status Header - Always visible */}
-      <div className="border-b bg-white px-4 py-6">
-        {/* <ScenarioStatusHeader usage={weeklyUsage} /> */}
-        <div className="mx-auto max-w-4xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="text-2xl font-bold">魔 間</div>
-              <div className="text-sm text-gray-600">
-                {weeklyUsage.completedCount}/{weeklyUsage.limit} scenarios this week
-                {" • "}
-                Resets {new Date(weeklyUsage.resetDateIso).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ScenarioStatusHeader usage={weeklyUsage} />
 
       {/* Main Content Area */}
       <div className="flex flex-1 items-center justify-center p-8">
         <div className="w-full max-w-6xl">
-          {/* Carousel - Always visible */}
-          <div className="mb-8">
-            {/* <ScenarioCarousel
-              scenarios={displayScenarios}
-              visibleState={carouselState}
-              allTilesDisabled={allTilesDisabled}
-              onScroll={handleScroll}
-              onTileClick={handleStartScenario}
-            /> */}
-            <div className="text-center">
-              <h2 className="mb-4 text-2xl font-semibold">Choose Your Scenario</h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                {displayScenarios.map((scenario) => (
-                  <div
-                    key={scenario.id}
-                    className={`rounded-lg border p-6 ${
-                      allTilesDisabled
-                        ? "cursor-not-allowed opacity-50 grayscale"
-                        : "cursor-pointer hover:shadow-lg"
-                    }`}
-                    onClick={() => !allTilesDisabled && handleStartScenario(scenario.id)}
-                  >
-                    <div className="text-4xl">{scenario.emoji}</div>
-                    <h3 className="mt-2 font-semibold">{scenario.title}</h3>
-                    {actionState[scenario.id]?.status === "starting" && (
-                      <div className="mt-2 text-sm text-gray-500">Starting...</div>
-                    )}
-                    {actionState[scenario.id]?.status === "error" && (
-                      <div className="mt-2 text-sm text-red-500">Error</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+          {/* Section Title */}
+          <div className="mb-8 text-center">
+            <h2 className="text-3xl font-bold text-gray-900">Choose Your Scenario</h2>
+            <p className="mt-2 text-sm italic text-gray-500">
+              Pick one. Commit to it. No wandering mid-conversation.
+            </p>
           </div>
 
-          {/* Status Banner - Conditional */}
+          {/* Carousel - Always visible */}
+          <div className="mb-8">
+            <ScenarioCarousel visibleState={carouselState} onScroll={handleScroll}>
+              {/* TODO: Replace with ScenarioTile components */}
+              {displayScenarios.map((scenario) => (
+                <div
+                  key={scenario.id}
+                  className={`flex flex-col items-center justify-center rounded-lg border-2 p-8 ${
+                    allTilesDisabled
+                      ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-50 grayscale"
+                      : "cursor-pointer border-gray-300 bg-white hover:border-blue-500 hover:shadow-lg"
+                  }`}
+                  onClick={() => !allTilesDisabled && handleStartScenario(scenario.id)}
+                >
+                  <div className="text-6xl">{scenario.emoji}</div>
+                  <h3 className="mt-4 text-xl font-semibold text-gray-900">{scenario.title}</h3>
+                  {actionState[scenario.id]?.status === "starting" && (
+                    <div className="mt-2 text-sm text-gray-500">Starting...</div>
+                  )}
+                  {actionState[scenario.id]?.status === "error" && (
+                    <div className="mt-2 text-sm text-red-500">
+                      {actionState[scenario.id].error?.message || "Error"}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </ScenarioCarousel>
+          </div>
+
+          {/* Status Banner - Only shown when tiles are disabled */}
           {statusBannerVariant && (
-            <div className="mb-8">
-              {/* <StatusBanner
-                variant={statusBannerVariant}
-                activeSession={activeSession}
-                usage={weeklyUsage}
-                onResume={handleResume}
-                onRefresh={handleRefresh}
-              /> */}
-              <div className="rounded-lg border border-yellow-400 bg-yellow-50 p-4">
-                {statusBannerVariant === "active-session" && activeSession && (
-                  <div>
-                    <p className="font-semibold">You have an active session</p>
-                    <p className="mt-1 text-sm text-gray-600">
-                      Continue your conversation in "{activeSession.scenario_title}"
-                    </p>
-                    <button
-                      onClick={handleResume}
-                      className="mt-2 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-                    >
-                      Resume scenario
-                    </button>
-                  </div>
-                )}
-                {statusBannerVariant === "rate-limit" && (
-                  <div>
-                    <p className="font-semibold">Weekly limit reached</p>
-                    <p className="mt-1 text-sm text-gray-600">
-                      You've completed {weeklyUsage.completedCount}/{weeklyUsage.limit} scenarios this
-                      week. Come back after{" "}
-                      {new Date(weeklyUsage.resetDateIso).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-                      .
-                    </p>
-                    <button
-                      onClick={handleRefresh}
-                      className="mt-2 rounded bg-gray-600 px-4 py-2 text-sm text-white hover:bg-gray-700"
-                    >
-                      Refresh status
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+            <StatusBanner
+              variant={statusBannerVariant}
+              activeSession={activeSession}
+              usage={weeklyUsage}
+              onResume={handleResume}
+              onRefresh={handleRefresh}
+            />
           )}
         </div>
       </div>
