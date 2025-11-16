@@ -39,7 +39,7 @@ export function ChatPanel({
 
   return (
     <div
-      className={`flex flex-col h-full border-r border-gray-200 ${
+      className={`flex min-h-0 flex-col h-full border-r border-gray-200 ${
         chatType === "main" ? "bg-gray-50" : "bg-slate-50"
       }`}
     >
@@ -52,7 +52,7 @@ export function ChatPanel({
       </div>
 
       {/* Message List - Scrollable Area */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0">
         <MessageList messages={messages} chatType={chatType} />
       </div>
 

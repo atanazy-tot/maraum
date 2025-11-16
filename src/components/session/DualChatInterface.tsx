@@ -34,7 +34,7 @@ function DualChatInterfaceContent() {
       <CompletionBanner isVisible={session.is_completed} />
 
       {/* Dual Chat Grid - 50/50 Split */}
-      <div className="grid grid-cols-2 flex-1 gap-0 overflow-hidden">
+      <div className="grid grid-cols-2 flex-1 gap-0 min-h-0 overflow-hidden">
         {/* Main Chat - Left Panel (魔) */}
         <ChatPanel
           chatType="main"

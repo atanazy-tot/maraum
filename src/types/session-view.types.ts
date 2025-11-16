@@ -39,6 +39,8 @@ export interface SessionContextValue {
   sendHelperMessage: (content: string) => Promise<void>;
   error: string | null;
   clearError: () => void;
+  hasAnimatedMessage: (messageId: string) => boolean;
+  markMessageAnimated: (messageId: string) => void;
 }
 
 /**
